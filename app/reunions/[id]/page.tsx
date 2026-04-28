@@ -20,6 +20,7 @@ import {
 import { AIMeetingMinutes } from "@/app/components/AIMeetingMinutes";
 import { ActionsTable } from "@/app/components/ActionsTable";
 import { toast } from "@/hooks/use-toast";
+import { TranscriptViewer } from "@/app/components/TranscriptViewer";
 
 // Données mock
 const meetingData = {
@@ -159,9 +160,9 @@ export default function MeetingDetailPage() {
           />
         </TabsContent>
 
-        {/* <TabsContent value="transcript" className="mt-6">
+        <TabsContent value="transcript" className="mt-6">
           <TranscriptViewer />
-        </TabsContent> */}
+        </TabsContent>
       </Tabs>
 
       {/* Badge qualité IA */}
