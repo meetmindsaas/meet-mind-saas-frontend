@@ -7,10 +7,16 @@ import { UploadCloud, File, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 
-interface DropzoneProps {
-  onUpload: (file: File) => void;
-}
+type UploadResult = {
+  file: File;
+  transcript: string;
+  // compteRendu: string;
+  raw: unknown;
+};
 
+interface DropzoneProps {
+  onUpload: (data: UploadResult) => void;
+}
 export function Dropzone({ onUpload }: DropzoneProps) {
   const [file, setFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -31,21 +37,251 @@ export function Dropzone({ onUpload }: DropzoneProps) {
     multiple: false,
   });
 
+  //   const handleUpload = async () => {
+  //   if (!file) return;
+
+  //   setIsUploading(true);
+  //   setUploadProgress(5);
+
+  //   try {
+  //     // =========================
+  //     // 1. UPLOAD
+  //     // =========================
+  //     const formData = new FormData();
+  //     formData.append("file", file);
+
+  //     const uploadRes = await fetch("/api/gladia/upload", {
+  //       method: "POST",
+  //       body: formData,
+  //     });
+
+  //     setUploadProgress(25);
+
+  //     if (!uploadRes.ok) {
+  //       const errorData = await uploadRes.json();
+  //       throw new Error(errorData.error || "Erreur upload");
+  //     }
+
+  //     const { audio_url } = await uploadRes.json();
+
+  //     if (!audio_url) {
+  //       throw new Error("audio_url manquant");
+  //     }
+
+  //     // =========================
+  //     // 2. LANCER TRANSCRIPTION
+  //     // =========================
+  //     const transcriptRes = await fetch("/api/gladia/transcribe", {
+  //       method: "POST",
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //       },
+  //       body: JSON.stringify({
+  //         audio_url,
+  //         language: "fr",
+  //       }),
+  //     });
+
+  //     setUploadProgress(50);
+
+  //     if (!transcriptRes.ok) {
+  //       const errorData = await transcriptRes.json();
+  //       throw new Error(errorData.error || "Erreur transcription");
+  //     }
+
+  //     const transcriptData = await transcriptRes.json();
+
+  //     const jobId = transcriptData?.id;
+
+  //     if (!jobId) {
+  //       throw new Error("ID de transcription manquant");
+  //     }
+
+  //     // =========================
+  //     // 3. POLLING RESULTAT
+  //     // =========================
+  //     let status = "processing";
+  //     let resultData: unknown = null;
+
+  //     while (status === "processing") {
+  //       await new Promise((r) => setTimeout(r, 2000));
+
+  //       const resultRes = await fetch(`/api/gladia/result?id=${jobId}`);
+
+  //       if (!resultRes.ok) {
+  //         throw new Error("Erreur récupération résultat");
+  //       }
+
+  //       const result = await resultRes.json();
+
+  //       status = result.status;
+  //       resultData = result;
+
+  //       console.log("Status:", status);
+
+  //       // progression dynamique
+  //       setUploadProgress((prev) => Math.min(prev + 5, 90));
+  //     }
+
+  //     // =========================
+  //     // 4. EXTRACTION TEXTE
+  //     // =========================
+  //     const finalResult = resultData as {
+  //       result?: {
+  //         transcription?: {
+  //           full_transcript?: string;
+  //         };
+  //       };
+  //     };
+
+  //     const text = finalResult?.result?.transcription?.full_transcript || "";
+
+  //     setUploadProgress(100);
+
+  //     // =========================
+  //     // 5. CALLBACK
+  //     // =========================
+  //     onUpload({
+  //       file,
+  //       audioUrl: audio_url,
+  //       transcript: text,
+  //       raw: resultData,
+  //     });
+  //   } catch (error: unknown) {
+  //     if (error instanceof Error) {
+  //       console.error("Erreur:", error.message);
+  //     } else {
+  //       console.error("Erreur inconnue:", error);
+  //     }
+  //   } finally {
+  //     setTimeout(() => {
+  //       setIsUploading(false);
+  //       setFile(null);
+  //       setUploadProgress(0);
+  //     }, 1200);
+  //   }
+  // };
+
+  // OPENAI
   const handleUpload = async () => {
     if (!file) return;
+
     setIsUploading(true);
-    // Simuler upload
-    for (let i = 0; i <= 100; i += 10) {
-      await new Promise((resolve) => setTimeout(resolve, 200));
-      setUploadProgress(i);
+    setUploadProgress(10);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/openai/transcribe", {
+        method: "POST",
+        body: formData,
+      });
+
+      setUploadProgress(70);
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Erreur transcription");
+      }
+
+      const data = await res.json();
+
+      /**
+       * data = { text: "..." }
+       */
+      const text = data.text || "";
+
+      console.log("Transcript:", data);
+      setUploadProgress(100);
+
+      onUpload({
+        file,
+        transcript: text,
+        raw: data,
+      });
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.error(error.message);
+      } else {
+        console.error("Erreur inconnue", error);
+      }
+    } finally {
+      setTimeout(() => {
+        setIsUploading(false);
+        setFile(null);
+        setUploadProgress(0);
+      }, 1000);
     }
-    onUpload(file);
-    setTimeout(() => {
-      setIsUploading(false);
-      setFile(null);
-      setUploadProgress(0);
-    }, 1000);
   };
+
+  // Assemblyai
+  // const handleUpload = async () => {
+  //   if (!file) return;
+
+  //   setIsUploading(true);
+  //   setUploadProgress(10);
+
+  //   try {
+  //     const formData = new FormData();
+  //     formData.append("file", file);
+
+  //     // =========================
+  //     // 1. Start transcription
+  //     // =========================
+  //     const res = await fetch("/api/assemblyai/transcribe", {
+  //       method: "POST",
+  //       body: formData,
+  //     });
+
+  //     if (!res.ok) {
+  //       throw new Error("Erreur démarrage transcription");
+  //     }
+
+  //     const { id } = await res.json();
+
+  //     setUploadProgress(30);
+
+  //     // =========================
+  //     // 2. Polling
+  //     // =========================
+  //     let completed = false;
+
+  //     while (!completed) {
+  //       const statusRes = await fetch(`/api/assemblyai/status?id=${id}`);
+  //       const statusData = await statusRes.json();
+
+  //       console.log("Status:", statusData);
+
+  //       if (statusData.status === "completed") {
+  //         completed = true;
+
+  //         setUploadProgress(90);
+
+  //         onUpload({
+  //           file,
+  //           transcript: statusData.transcript,
+  //           compteRendu: statusData.compteRendu,
+  //           raw: statusData,
+  //         });
+
+  //         setUploadProgress(100);
+  //       } else if (statusData.status === "error") {
+  //         throw new Error(statusData.error || "Erreur transcription");
+  //       }
+
+  //       await new Promise((r) => setTimeout(r, 3000));
+  //     }
+  //   } catch (error) {
+  //     console.error("UPLOAD ERROR:", error);
+  //   } finally {
+  //     setTimeout(() => {
+  //       setIsUploading(false);
+  //       setFile(null);
+  //       setUploadProgress(0);
+  //     }, 1500);
+  //   }
+  // };
 
   return (
     <div className="space-y-4">

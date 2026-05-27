@@ -22,19 +22,76 @@ import {
 } from "@/components/ui/select";
 import { Upload, Link, Mic, Loader2, CheckCircle2 } from "lucide-react";
 import { Dropzone } from "../components/Dropzone";
+import { AudioRecorder } from "../components/AudioRecorder";
+import { useRouter } from "next/navigation";
+import { toast } from "@/hooks/use-toast";
 
 export default function ImportPage() {
+  const router = useRouter();
   const [isProcessing, setIsProcessing] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [meetingTitle, setMeetingTitle] = useState("");
+  const [selectedLanguage, setSelectedLanguage] = useState("fr");
+  const [selectedModel, setSelectedModel] = useState("balanced");
 
   const handleImport = async () => {
     setIsProcessing(true);
-    // Simuler l'appel API
     setTimeout(() => {
       setIsProcessing(false);
       setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
+      toast({
+        title: "Import réussi",
+        description: "Redirection vers le compte rendu...",
+        variant: "success",
+      });
+      setTimeout(() => {
+        setSuccess(false);
+        router.push("/reunions");
+      }, 2000);
     }, 2000);
+  };
+
+  const handleRecordingComplete = async (audioBlob: Blob, duration: number) => {
+    setIsProcessing(true);
+
+    try {
+      // Créer un FormData pour envoyer l'enregistrement
+      const formData = new FormData();
+      formData.append("audio", audioBlob, "recording.webm");
+      formData.append("language", selectedLanguage);
+      formData.append("duration", duration.toString());
+      formData.append("title", meetingTitle || "Enregistrement direct");
+
+      // Envoyer à l'API pour transcription
+      const response = await fetch("/api/transcription", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: "Enregistrement soumis",
+          description: "Transcription en cours...",
+          variant: "success",
+        });
+
+        // Rediriger vers la page de traitement
+        router.push(`/reunions/processing/${data.transcriptionId}`);
+      } else {
+        throw new Error(data.error || "Erreur lors du traitement");
+      }
+    } catch (error) {
+      console.error(error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de traiter l'enregistrement",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -131,20 +188,21 @@ export default function ImportPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="rounded-lg border-2 border-dashed p-8 text-center">
-                <Mic className="h-12 w-12 mx-auto text-muted-foreground" />
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Prêt à enregistrer
-                </p>
-                <Button className="mt-4" variant="destructive">
-                  Démarrer l&apos;enregistrement
-                </Button>
+              <div className="rounded-lg border p-6">
+                <AudioRecorder
+                  onRecordingComplete={handleRecordingComplete}
+                  maxDuration={600} // 10 minutes max
+                />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="meeting-title">Titre de la réunion</Label>
+                <Label htmlFor="meeting-title">
+                  Titre de la réunion (optionnel)
+                </Label>
                 <Input
                   id="meeting-title"
                   placeholder="Ex: Daily standup - 15/01"
+                  value={meetingTitle}
+                  onChange={(e) => setMeetingTitle(e.target.value)}
                 />
               </div>
             </CardContent>
@@ -160,7 +218,7 @@ export default function ImportPage() {
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label>Modèle IA</Label>
-              <Select defaultValue="fast">
+              <Select value={selectedModel} onValueChange={setSelectedModel}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -178,8 +236,11 @@ export default function ImportPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Langue</Label>
-              <Select defaultValue="fr">
+              <Label>Langue de transcription</Label>
+              <Select
+                value={selectedLanguage}
+                onValueChange={setSelectedLanguage}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -187,13 +248,19 @@ export default function ImportPage() {
                   <SelectItem value="fr">Français</SelectItem>
                   <SelectItem value="en">English</SelectItem>
                   <SelectItem value="es">Español</SelectItem>
+                  <SelectItem value="de">Deutsch</SelectItem>
+                  <SelectItem value="it">Italiano</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
           <div className="space-y-2">
             <Label>Titre du compte rendu</Label>
-            <Input placeholder="Laisser vide pour génération automatique" />
+            <Input
+              placeholder="Laisser vide pour génération automatique"
+              value={meetingTitle}
+              onChange={(e) => setMeetingTitle(e.target.value)}
+            />
           </div>
         </CardContent>
       </Card>

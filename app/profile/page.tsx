@@ -27,10 +27,15 @@ import {
   Shield,
   Bell,
   Globe,
+  Building2,
+  Users,
+  BadgeCheck,
 } from "lucide-react";
 import Link from "next/link";
+import { useUser } from "@/contexts/UserContext";
 
 export default function ProfilePage() {
+  const user = useUser(); // ← récupération des données de contexte
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     firstName: "Jean",
@@ -55,8 +60,6 @@ export default function ProfilePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
-    // Simuler appel API
     setTimeout(() => {
       setIsLoading(false);
       toast({
@@ -72,6 +75,18 @@ export default function ProfilePage() {
     actions: 128,
     accuracy: 94,
     hoursSaved: 32,
+  };
+
+  // Helper pour afficher le libellé du rôle
+  const getRoleLabel = (role: string) => {
+    switch (role) {
+      case "owner":
+        return "Propriétaire";
+      case "admin":
+        return "Administrateur";
+      default:
+        return "Membre";
+    }
   };
 
   return (
@@ -94,16 +109,14 @@ export default function ProfilePage() {
                 <Avatar className="h-24 w-24">
                   <AvatarImage src="/avatars/user.jpg" alt="Avatar" />
                   <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white text-2xl">
-                    JD
+                    {user.name.charAt(0)}
                   </AvatarFallback>
                 </Avatar>
                 <Button variant="outline" size="sm" className="mt-3">
                   <Camera className="h-3 w-3 mr-2" />
                   Changer la photo
                 </Button>
-                <h2 className="mt-4 text-xl font-semibold">
-                  {formData.firstName} {formData.lastName}
-                </h2>
+                <h2 className="mt-4 text-xl font-semibold">{user.name}</h2>
                 <p className="text-sm text-muted-foreground">
                   {formData.jobTitle}
                 </p>
@@ -114,7 +127,63 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
 
-          {/* Statistiques */}
+          {/* Carte Organisation / Contexte */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Building2 className="h-4 w-4" />
+                Mon contexte
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex justify-between items-center border-b pb-2">
+                <span className="text-sm text-muted-foreground">
+                  Organisation
+                </span>
+                <span className="font-medium">{user.organization.name}</span>
+              </div>
+              {user.department && (
+                <div className="flex justify-between items-center border-b pb-2">
+                  <span className="text-sm text-muted-foreground">
+                    Département
+                  </span>
+                  <span className="font-medium">{user.department.name}</span>
+                </div>
+              )}
+              <div className="flex justify-between items-center border-b pb-2">
+                <span className="text-sm text-muted-foreground">Rôle</span>
+                <Badge variant="outline" className="capitalize">
+                  {getRoleLabel(user.role)}
+                </Badge>
+              </div>
+              {user.isDepartmentManager && (
+                <div className="flex justify-between items-center border-b pb-2">
+                  <span className="text-sm text-muted-foreground">Manager</span>
+                  <BadgeCheck className="h-4 w-4 text-blue-500" />
+                </div>
+              )}
+              {user.organization.industry && (
+                <div className="flex justify-between items-center border-b pb-2">
+                  <span className="text-sm text-muted-foreground">Secteur</span>
+                  <span className="text-sm capitalize">
+                    {user.organization.industry}
+                  </span>
+                </div>
+              )}
+              {user.organization.teamSize && (
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">
+                    Taille équipe
+                  </span>
+                  <span className="text-sm">
+                    {user.organization.teamSize} personnes
+                  </span>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Statistiques (inchangé) */}
           <Card>
             <CardHeader>
               <CardTitle className="text-sm font-medium">
@@ -149,7 +218,7 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
 
-          {/* Navigation rapide */}
+          {/* Navigation rapide (inchangée) */}
           <Card>
             <CardHeader>
               <CardTitle className="text-sm font-medium">
@@ -182,7 +251,7 @@ export default function ProfilePage() {
           </Card>
         </div>
 
-        {/* Formulaire principal */}
+        {/* Formulaire principal (inchangé) */}
         <div className="lg:col-span-2">
           <form onSubmit={handleSubmit}>
             <Card>

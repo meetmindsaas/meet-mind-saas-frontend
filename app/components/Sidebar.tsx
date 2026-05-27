@@ -12,6 +12,7 @@ import {
   History,
   Users,
   Star,
+  Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,7 @@ const menuItems = [
   { icon: Star, label: "Favoris", href: "/reunions?filter=favorites" },
   { icon: Users, label: "Équipe", href: "/team" },
   { icon: Settings, label: "Paramètres", href: "/settings" },
+  { icon: Bell, label: "Notifications", href: "/notifications" },
 ];
 
 export function Sidebar() {

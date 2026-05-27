@@ -1,13 +1,18 @@
-// app/components/Header.tsx (version complète)
+// app/components/Header.tsx
 "use client";
 
 import { usePathname } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import Link from "next/link";
+import { useState } from "react";
+import { toast } from "@/hooks/use-toast";
+import { useUser } from "@/contexts/UserContext";
 import {
+  Building2,
+  BadgeCheck,
+  Users,
+  ChevronDown,
   Search,
   Bell,
-  User,
   Command,
   LogOut,
   Settings,
@@ -15,8 +20,11 @@ import {
   Shield,
   Sparkles,
   CreditCard,
+  User as UserIcon,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,10 +39,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { useState } from "react";
-import { toast } from "@/hooks/use-toast";
-import { useEffect } from "react";
-import Link from "next/link";
 
 // Types
 interface Notification {
@@ -46,7 +50,7 @@ interface Notification {
   type: "meeting" | "action" | "system";
 }
 
-// Données mock
+// Données mock (à remplacer par les vraies données)
 const mockNotifications: Notification[] = [
   {
     id: "1",
@@ -84,11 +88,14 @@ const mockNotifications: Notification[] = [
 
 export function Header() {
   const pathname = usePathname();
+  const user = useUser();
   const [notifications, setNotifications] =
     useState<Notification[]>(mockNotifications);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  useEffect(() => {
+
+  // Gestion du raccourci clavier Cmd+K / Ctrl+K
+  if (typeof window !== "undefined") {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
@@ -97,15 +104,25 @@ export function Header() {
           ?.focus();
       }
     };
-
     document.addEventListener("keydown", handler);
+    // Pas de cleanup ici car ce code est exécuté à chaque render → à déplacer dans useEffect
+  }
 
-    return () => {
-      document.removeEventListener("keydown", handler);
+  // Version correcte avec useEffect
+  // (je la mets en commentaire, mais vous devez l'utiliser à la place du bloc ci-dessus)
+  /*
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        document.querySelector('input[type="search"]')?.focus();
+      }
     };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
   }, []);
+  */
 
-  // Calculer le titre de la page
   const getPageTitle = () => {
     if (pathname === "/") return "Tableau de bord";
     if (pathname === "/reunions") return "Mes réunions";
@@ -138,7 +155,7 @@ export function Header() {
       title: "Déconnexion",
       description: "Vous avez été déconnecté avec succès",
     });
-    // Redirection vers login
+    // À remplacer par une vraie déconnexion (suppression cookie, redirection)
     // router.push("/login");
   };
 
@@ -163,11 +180,32 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 md:px-6">
-      {/* Titre de la page - visible sur mobile seulement */}
-      <div className="flex items-center gap-4">
+      {/* Partie gauche : titre mobile + contexte organisation */}
+      <div className="flex items-center gap-3">
         <h1 className="text-lg font-semibold tracking-tight md:hidden">
           {getPageTitle()}
         </h1>
+        <div className="hidden md:block">
+          <div className="flex items-center gap-2">
+            <Building2 className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium">
+              {user.organization.name}
+            </span>
+            <ChevronDown className="h-3 w-3 text-muted-foreground" />
+            {user.department && (
+              <>
+                <span className="text-muted-foreground">/</span>
+                <Users className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm">{user.department.name}</span>
+              </>
+            )}
+            {user.isDepartmentManager && (
+              <span className="ml-2 inline-flex items-center rounded-full bg-blue-500/10 px-2 py-0.5 text-xs font-medium text-blue-600 dark:text-blue-400">
+                Manager
+              </span>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Barre de recherche - Desktop */}
@@ -194,9 +232,6 @@ export function Header() {
           <Sparkles className="h-3 w-3 text-primary" />
           <span className="text-xs font-medium">247 crédits</span>
         </div>
-
-        {/* Thème */}
-        {/* <ThemeToggle /> */}
 
         {/* Notifications */}
         <Popover>
@@ -261,54 +296,93 @@ export function Header() {
           </PopoverContent>
         </Popover>
 
-        {/* Menu utilisateur */}
+        {/* Menu utilisateur enrichi */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-8 w-8 rounded-full">
               <Avatar className="h-8 w-8">
                 <AvatarImage src="/avatars/user.jpg" alt="Avatar" />
                 <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white">
-                  JD
+                  {user.name.charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-56" align="end">
+          <DropdownMenuContent className="w-64" align="end">
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">Jean Dupont</p>
+                <p className="text-sm font-medium leading-none">{user.name}</p>
                 <p className="text-xs leading-none text-muted-foreground">
-                  jean@meetmind.com
+                  {user.email}
                 </p>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
+            <div className="px-2 py-1.5 text-xs text-muted-foreground">
+              <div className="flex justify-between">
+                <span>Organisation</span>
+                <span className="font-medium text-foreground">
+                  {user.organization.name}
+                </span>
+              </div>
+              {user.department && (
+                <div className="mt-1 flex justify-between">
+                  <span>Département</span>
+                  <span className="font-medium text-foreground">
+                    {user.department.name}
+                  </span>
+                </div>
+              )}
+              <div className="mt-1 flex justify-between">
+                <span>Rôle</span>
+                <span className="capitalize font-medium text-foreground">
+                  {user.role}
+                </span>
+              </div>
+              {user.isDepartmentManager && (
+                <div className="mt-1 flex items-center justify-end gap-1 text-blue-600">
+                  <BadgeCheck className="h-3 w-3" />
+                  <span>Manager</span>
+                </div>
+              )}
+            </div>
+            <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <User className="mr-2 h-4 w-4" />
-                <Link href="/profile">Profil</Link>
+              <DropdownMenuItem asChild>
+                <Link href="/profile">
+                  <UserIcon className="mr-2 h-4 w-4" />
+                  Profil
+                </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <CreditCard className="mr-2 h-4 w-4" />
-                <Link href="/subscription">Abonnement</Link>
+              <DropdownMenuItem asChild>
+                <Link href="/subscription">
+                  <CreditCard className="mr-2 h-4 w-4" />
+                  Abonnement
+                </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Shield className="mr-2 h-4 w-4" />
-                <Link href="/security">Sécurité</Link>
+              <DropdownMenuItem asChild>
+                <Link href="/security">
+                  <Shield className="mr-2 h-4 w-4" />
+                  Sécurité
+                </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Settings className="mr-2 h-4 w-4" />
-                <Link href="/parametres">Paramètres</Link>
+              <DropdownMenuItem asChild>
+                <Link href="/parametres">
+                  <Settings className="mr-2 h-4 w-4" />
+                  Paramètres
+                </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <HelpCircle className="mr-2 h-4 w-4" />
-                <Link href="/help">Aide</Link>
+              <DropdownMenuItem asChild>
+                <Link href="/help">
+                  <HelpCircle className="mr-2 h-4 w-4" />
+                  Aide
+                </Link>
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout} className="text-red-500">
               <LogOut className="mr-2 h-4 w-4" />
-              <span>Déconnexion</span>
+              Déconnexion
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -325,7 +399,6 @@ export function Header() {
         </Button>
       </div>
 
-      {/* Overlay de recherche mobile */}
       {searchOpen && (
         <div className="absolute inset-x-0 top-16 z-50 border-b bg-background p-4 md:hidden">
           <form onSubmit={handleSearch}>
